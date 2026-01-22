@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@900&amp;display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
       box-sizing: border-box;
@@ -206,12 +208,117 @@
       to { transform: rotate(360deg); }
     }
     
+    @keyframes pulse-scale {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+      }
+    }
+    
+    @keyframes rotate-slow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    @keyframes shimmer {
+      0% {
+        background-position: -1000px 0;
+      }
+      100% {
+        background-position: 1000px 0;
+      }
+    }
+    
+    @keyframes bounce-in {
+      0% {
+        transform: scale(0);
+        opacity: 0;
+      }
+      50% {
+        transform: scale(1.2);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes countdown-zoom {
+      0% {
+        transform: scale(0);
+        opacity: 0;
+      }
+      50% {
+        transform: scale(1.3);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 0;
+      }
+    }
+    
+    @keyframes countdown-pulse {
+      0%, 100% {
+        transform: scale(1);
+        filter: brightness(1);
+      }
+      50% {
+        transform: scale(1.05);
+        filter: brightness(1.2);
+      }
+    }
+    
     .result-card {
       animation: fadeSlideUp 0.5s ease-out forwards;
     }
     
     .status-banner {
       animation: zoomIn 0.6s ease-out forwards;
+    }
+    
+    .loading-overlay {
+      background: rgba(0, 0, 0, 0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    
+    .loading-circle {
+      width: 120px;
+      height: 120px;
+      border: 6px solid rgba(168, 85, 247, 0.2);
+      border-top-color: #a855f7;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    .loading-pulse {
+      animation: pulse-scale 1.5s ease-in-out infinite;
+    }
+    
+    .loading-text-shimmer {
+      background: linear-gradient(90deg, #a855f7 0%, #ec4899 50%, #a855f7 100%);
+      background-size: 1000px 100%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: shimmer 2s linear infinite;
+    }
+    
+    .loading-dots span {
+      animation: bounce-in 0.6s ease-in-out infinite;
+    }
+    
+    .loading-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+    
+    .loading-dots span:nth-child(3) {
+      animation-delay: 0.4s;
     }
   </style>
   <style>@view-transition { navigation: auto; }</style>
@@ -224,7 +331,30 @@
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
    </div><!-- Confetti Container -->
-   <div id="confetti-container" class="fixed inset-0 pointer-events-none z-50"></div><!-- Main Content -->
+   <div id="confetti-container" class="fixed inset-0 pointer-events-none z-50"></div><!-- Dramatic Loading Screen -->
+   <div id="loading-screen" class="hidden fixed inset-0 z-50 loading-overlay flex flex-col items-center justify-center">
+    <div class="text-center space-y-8"><!-- Animated Circle Spinner -->
+     <div class="relative flex items-center justify-center">
+      <div class="loading-circle"></div>
+      <div class="absolute text-6xl loading-pulse">
+       🎓
+      </div>
+     </div><!-- Shimmer Text -->
+     <div class="space-y-3">
+      <h2 class="text-3xl md:text-4xl font-bold loading-text-shimmer">Mengecek Status Anda</h2>
+      <div class="flex items-center justify-center gap-2 text-purple-300 text-xl loading-dots"><span>•</span> <span>•</span> <span>•</span>
+      </div>
+     </div><!-- Progress Messages -->
+     <div class="space-y-2">
+      <p id="loading-message" class="text-purple-200 text-lg font-medium animate-pulse">Menghubungkan ke database...</p>
+     </div>
+    </div>
+   </div><!-- Countdown Screen (3-2-1) -->
+   <div id="countdown-screen" class="hidden fixed inset-0 z-50 loading-overlay flex flex-col items-center justify-center">
+    <div id="countdown-number" class="text-[20rem] md:text-[25rem] font-black text-transparent bg-clip-text bg-gradient-to-br from-purple-400 via-pink-400 to-blue-400" style="animation: countdown-zoom 1s ease-in-out; font-family: 'Orbitron', monospace; letter-spacing: 0.1em; text-shadow: 0 0 40px rgba(168, 85, 247, 0.6), 0 0 80px rgba(236, 72, 153, 0.4);">
+     3
+    </div>
+   </div><!-- Main Content -->
    <div class="relative z-10 min-h-full flex flex-col items-center justify-center px-4 py-8"><!-- Countdown Timer Section -->
     <div id="countdown-section" class="w-full max-w-2xl">
      <div class="glass-card rounded-3xl p-8 md:p-12 text-center"><!-- Logo -->
@@ -312,6 +442,10 @@
         </div>
         <div class="flex justify-between items-center p-4 bg-white/5 rounded-xl"><span class="text-purple-200">Status</span> <span id="result-status" class="font-bold">-</span>
         </div>
+       </div><!-- Download Button -->
+       <div class="mt-6"><button id="download-btn" onclick="downloadPDF()" class="w-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-pink-500/25 flex items-center justify-center gap-2">
+         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+         </svg><span>DOWNLOAD HASIL PDF</span> </button>
        </div>
       </div>
      </div>
@@ -535,6 +669,8 @@
       const btnText = document.getElementById('btn-text');
       const btnSpinner = document.getElementById('btn-spinner');
       const errorMessage = document.getElementById('error-message');
+      const loadingScreen = document.getElementById('loading-screen');
+      const loadingMessage = document.getElementById('loading-message');
       
       const nisn = nisnInput.value.trim();
       
@@ -543,13 +679,33 @@
         return;
       }
       
-      // Show loading
+      // Show button loading
       checkBtn.disabled = true;
       btnText.textContent = 'Memuat...';
       btnSpinner.classList.remove('hidden');
       errorMessage.classList.add('hidden');
       
+      // Show dramatic loading screen
+      loadingScreen.classList.remove('hidden');
+      
+      // Dramatic loading messages sequence
+      const messages = [
+        'Menghubungkan ke database...',
+        'Mengambil data siswa...',
+        'Memproses informasi...',
+        'Menyiapkan hasil...'
+      ];
+      
+      let messageIndex = 0;
+      const messageInterval = setInterval(() => {
+        if (messageIndex < messages.length) {
+          loadingMessage.textContent = messages[messageIndex];
+          messageIndex++;
+        }
+      }, 750);
+      
       try {
+        // Fetch data
         const data = await fetchData();
         
         // Debug: Log pertama data untuk melihat struktur
@@ -564,7 +720,14 @@
           return rowNisn === nisn;
         });
         
+        // Wait for minimum 3 seconds for dramatic effect
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Clear message interval
+        clearInterval(messageInterval);
+        
         if (!student) {
+          loadingScreen.classList.add('hidden');
           showError('Data NISN tidak ditemukan. Silakan periksa kembali.');
           checkBtn.disabled = false;
           btnText.textContent = 'CEK STATUS';
@@ -573,9 +736,39 @@
         }
         
         console.log('Found student:', student);
+        
+        // Hide loading screen
+        loadingScreen.classList.add('hidden');
+        
+        // Show countdown screen (3-2-1)
+        const countdownScreen = document.getElementById('countdown-screen');
+        const countdownNumber = document.getElementById('countdown-number');
+        
+        countdownScreen.classList.remove('hidden');
+        
+        // Countdown sequence: 3, 2, 1
+        const countdownSequence = [3, 2, 1];
+        
+        for (let i = 0; i < countdownSequence.length; i++) {
+          countdownNumber.textContent = countdownSequence[i];
+          countdownNumber.style.animation = 'none';
+          
+          // Trigger reflow to restart animation
+          void countdownNumber.offsetWidth;
+          
+          countdownNumber.style.animation = 'countdown-zoom 1s ease-in-out';
+          
+          // Wait 1 second before next number
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        // Hide countdown screen and show result
+        countdownScreen.classList.add('hidden');
         showResult(student);
         
       } catch (error) {
+        clearInterval(messageInterval);
+        loadingScreen.classList.add('hidden');
         console.error('Error fetching data:', error);
         showError('Terjadi kesalahan saat mengambil data. Silakan coba lagi. Error: ' + error.message);
         checkBtn.disabled = false;
@@ -705,6 +898,156 @@
         container.appendChild(particle);
       }
     }
+    
+    // Download PDF Function
+    function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      
+      // Get student data
+      const nama = document.getElementById('result-nama').textContent;
+      const nisn = document.getElementById('result-nisn').textContent;
+      const peringkat = document.getElementById('result-peringkat').textContent;
+      const statusText = document.getElementById('result-status').textContent;
+      const statusEl = document.getElementById('result-status');
+      const isEligible = statusEl.classList.contains('text-green-400');
+      
+      // Set colors
+      const primaryColor = [168, 85, 247]; // Purple
+      const secondaryColor = isEligible ? [34, 197, 94] : [251, 146, 60]; // Green or Orange
+      
+      // Header Background - Purple Gradient Effect
+      doc.setFillColor(168, 85, 247);
+      doc.rect(0, 0, 210, 50, 'F');
+      
+      // Logo placeholder (circle)
+      doc.setFillColor(255, 255, 255);
+      doc.circle(105, 20, 10, 'F');
+      doc.setFontSize(16);
+      doc.setTextColor(168, 85, 247);
+      doc.text('🎓', 105, 23, { align: 'center' });
+      
+      // Title
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('PENGUMUMAN ELIGIBILITY SNBP', 105, 38, { align: 'center' });
+      doc.setFontSize(12);
+      doc.text('2025-2026', 105, 45, { align: 'center' });
+      
+      // Status Banner
+      const yPos = 60;
+      if (isEligible) {
+        doc.setFillColor(34, 197, 94, 0.2);
+        doc.roundedRect(20, yPos, 170, 35, 3, 3, 'F');
+        doc.setDrawColor(34, 197, 94);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(20, yPos, 170, 35, 3, 3, 'S');
+        
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(34, 197, 94);
+        doc.text('🎉 SELAMAT!', 105, yPos + 12, { align: 'center' });
+        
+        doc.setFontSize(12);
+        doc.setTextColor(40, 40, 40);
+        doc.text('Anda Lolos Eligible SNBP', 105, yPos + 22, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setTextColor(80, 80, 80);
+        doc.text('Anda berhak mendaftar SNBP 2025-2026', 105, yPos + 30, { align: 'center' });
+      } else {
+        doc.setFillColor(251, 146, 60, 0.2);
+        doc.roundedRect(20, yPos, 170, 35, 3, 3, 'F');
+        doc.setDrawColor(251, 146, 60);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(20, yPos, 170, 35, 3, 3, 'S');
+        
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(251, 146, 60);
+        doc.text('💪 MOHON MAAF', 105, yPos + 12, { align: 'center' });
+        
+        doc.setFontSize(12);
+        doc.setTextColor(40, 40, 40);
+        doc.text('Anda Belum Lolos Eligible', 105, yPos + 22, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setTextColor(80, 80, 80);
+        doc.text('Tetap Semangat Untuk Jalur Seleksi Selanjutnya', 105, yPos + 30, { align: 'center' });
+      }
+      
+      // Detail Section Header
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(60, 60, 60);
+      doc.text('Detail Hasil Seleksi', 105, 110, { align: 'center' });
+      
+      // Detail Cards
+      let cardY = 120;
+      const cardHeight = 18;
+      const cardSpacing = 5;
+      
+      const details = [
+        { label: 'Nama Lengkap', value: nama },
+        { label: 'NISN', value: nisn },
+        { label: 'Peringkat', value: peringkat },
+        { label: 'Status', value: statusText }
+      ];
+      
+      details.forEach((detail, index) => {
+        // Card background
+        doc.setFillColor(248, 248, 250);
+        doc.roundedRect(20, cardY, 170, cardHeight, 2, 2, 'F');
+        
+        // Label
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(120, 120, 120);
+        doc.text(detail.label, 25, cardY + 8);
+        
+        // Value
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(40, 40, 40);
+        
+        // Special color for status
+        if (detail.label === 'Status') {
+          doc.setTextColor(...secondaryColor);
+        }
+        
+        const valueText = detail.value.length > 30 ? detail.value.substring(0, 30) + '...' : detail.value;
+        doc.text(valueText, 185, cardY + 8, { align: 'right' });
+        
+        cardY += cardHeight + cardSpacing;
+      });
+      
+      // Footer with decorative line
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.5);
+      doc.line(20, 250, 190, 250);
+      
+      // Footer text
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(150, 150, 150);
+      const currentDate = new Date().toLocaleDateString('id-ID', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      doc.text('Dokumen ini dicetak pada: ' + currentDate, 105, 260, { align: 'center' });
+      doc.text('Salam SMANSABARU 🎓', 105, 267, { align: 'center' });
+      doc.setFontSize(8);
+      doc.text('Created @2025 by_ach322', 105, 274, { align: 'center' });
+      
+      // Watermark
+      doc.setFontSize(60);
+      doc.setTextColor(240, 240, 240);
+      doc.setFont('helvetica', 'bold');
+      doc.text('SNBP 2025', 105, 170, { align: 'center', angle: 45 });
+      
+      // Save PDF
+      const fileName = `Hasil_SNBP_${nisn}_${nama.replace(/\s+/g, '_')}.pdf`;
+      doc.save(fileName);
+    }
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9c06978b43c5a083',t:'MTc2ODgyODQzMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9c1eb971142b9d12',t:'MTc2OTA4MTQ4MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
